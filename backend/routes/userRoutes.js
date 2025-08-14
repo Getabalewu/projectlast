@@ -7,9 +7,32 @@ const router = express.Router();
 
 // Create a new user
 router.post("/", async (req, res) => {
-	const { name, email } = req.body;
-	const user = new User({ name, email });
+	const { name, email, password, department, year, studentId } = req.body;
+
+	// Validate required fields
+	if (!name || !email || !password || !department || !year || !studentId) {
+		return res.status(400).json({ message: "All fields are required" });
+	}
+
 	try {
+		// Check for existing user with same username or email
+		const existingUser = await User.findOne({
+			$or: [{ email }, { studentId }],
+		});
+		if (existingUser) {
+			return res
+				.status(400)
+				.json({ message: "Username or email already exists" });
+		}
+
+		const user = new User({
+			name,
+			email,
+			password,
+			department,
+			year,
+			studentId,
+		});
 		const savedUser = await user.save();
 		res.status(201).json(savedUser);
 	} catch (err) {

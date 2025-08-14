@@ -17,9 +17,9 @@ export function Header() {
 	};
 
 	const navigation = [
-		{ name: "Home", href: "/" },
-		{ name: "About", href: "/about" },
-		{ name: "Contact", href: "/contact" },
+		{ nameall: "Home", href: "/" },
+		{ nameall: "About", href: "/about" },
+		{ nameall: "Contact", href: "/contact" },
 	];
 
 	const protectedNavigation = [
@@ -34,7 +34,7 @@ export function Header() {
 	return (
 		<header className="bg-white shadow-sm border-b border-gray-200">
 			{/* Top Info Bar */}
-			<div className="bg-blue text-white py-2 text-sm">
+			<div className="hidden sm:block bg-blue text-white py-2 text-sm">
 				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 					<div className="flex justify-between items-center">
 						<div className="flex space-x-6">
@@ -69,11 +69,11 @@ export function Header() {
 
 			{/* Logo */}
 			<div>
-				<div className="w-full">
+				<div className="w-full h-auto">
 					<img
 						src="/images/logo.png" // Replace with your image URL
 						alt="Logo"
-						className="w-full h-[150px] object-cover"
+						className="w-full h-auto object-cover"
 					/>
 				</div>
 				<hr />
@@ -86,25 +86,24 @@ export function Header() {
 					<nav className="hidden md:flex space-x-8">
 						{navigation.map((item) => (
 							<Link
+								key={item.nameall}
+								to={item.href}
+								className="text-gray-700 hover:text-blue-600 font-medium transition-colors">
+								{item.name}
+							</Link>
+						))}
+						{protectedNavigation.map((item) => (
+							<Link
 								key={item.name}
 								to={item.href}
 								className="text-gray-700 hover:text-blue-600 font-medium transition-colors">
 								{item.name}
 							</Link>
 						))}
-						{user &&
-							protectedNavigation.map((item) => (
-								<Link
-									key={item.name}
-									to={item.href}
-									className="text-gray-700 hover:text-blue-600 font-medium transition-colors">
-									{item.name}
-								</Link>
-							))}
 					</nav>
 
 					{/* User Menu */}
-					<div className="flex items-center space-x-4">
+					<div className="flex items-center justify-between space-x-4">
 						{user ? (
 							<div className="flex items-center space-x-3">
 								<div className="flex items-center space-x-2 text-gray-700">
@@ -133,7 +132,7 @@ export function Header() {
 						) : (
 							<Link
 								to="/login"
-								className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+								className="bg-blue-600 text-white px-4 py-2 text-right rounded-lg hover:bg-blue-700 transition-colors">
 								Login
 							</Link>
 						)}
@@ -142,7 +141,7 @@ export function Header() {
 						<button
 							aria-label="Toggle menu"
 							onClick={() => setIsMenuOpen(!isMenuOpen)}
-							className="md:hidden p-2 rounded-md text-gray-700 hover:text-blue-600">
+							className="md:hidden p-2 rounded-md text-gray-700 justify-start hover:text-blue-600">
 							{isMenuOpen ? (
 								<X className="w-6 h-6" />
 							) : (

@@ -23,7 +23,6 @@ import { Contact } from "./components/Pages/Contact";
 import { Complaints } from "./components/Pages/Complaints";
 import { Dashboard } from "./components/Dashboard/Dashboard";
 import { AdminDashboard } from "./components/Admin/AdminDashboard";
-import ErrorBoundary from "../src/components/ErrorBoundary";
 import "./index.css";
 
 function AppContent() {
@@ -80,10 +79,7 @@ function AppContent() {
 						path="/elections"
 						element={
 							<ProtectedRoute>
-								<ErrorBoundary>
-									{" "}
-									<Elections />
-								</ErrorBoundary>
+								<Elections />
 							</ProtectedRoute>
 						}
 					/>

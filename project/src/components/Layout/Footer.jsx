@@ -98,8 +98,9 @@ export function Footer() {
 
 				<div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
 					<p>
-						&copy; {new Date().getFullYear()} Debre Berhan University Student
-						Union. All rights reserved.
+						Developed by Emare Ict hub internship Students &copy;{" "}
+						{new Date().getFullYear()} Debre Berhan University Student Union.
+						All rights reserved.
 					</p>
 				</div>
 			</div>

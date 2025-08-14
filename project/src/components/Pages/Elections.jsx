@@ -160,7 +160,7 @@ export function Elections() {
 
 	const filteredElections =
 		elections && Array.isArray(elections)
-			? elections.filte(
+			? elections.filter(
 					(election) => selectedTab === "all" || election.status === selectedTab
 			  )
 			: [];
@@ -395,74 +395,10 @@ export function Elections() {
 								animate={{ opacity: 1, y: 0 }}
 								transition={{ delay: index * 0.1 }}
 								className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-								<div className="flex items-start justify-between mb-4">
-									<div className="flex-1">
-										<h3 className="text-lg font-semibold text-gray-900 mb-2">
-											{election.title}
-										</h3>
-										<p className="text-gray-600 text-sm">
-											{election.description}
-										</p>
-									</div>
-									<div className="flex items-center space-x-2">
-										<span
-											className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
-												election.status
-											)}`}>
-											{getStatusIcon(election.status)}
-											<span className="ml-1 capitalize">{election.status}</span>
-										</span>
-										{user?.isAdmin && (
-											<button
-												onClick={() => handleDeleteElection(election.id)}
-												className="text-red-600 hover:text-red-700 p-1">
-												<Trash2 className="w-4 h-4" />
-											</button>
-										)}
-									</div>
-								</div>
-
-								{/* Stats */}
-								<div className="grid grid-cols-2 gap-4 mb-4">
-									<div className="bg-gray-50 rounded-lg p-3">
-										<div className="flex items-center space-x-2">
-											<Users className="w-4 h-4 text-gray-500" />
-											<span className="text-sm font-medium text-gray-900">
-												Votes
-											</span>
-										</div>
-										<p className="text-lg font-bold text-gray-900 mt-1">
-											{election.totalVotes
-												? election.totalVotes.toLocaleString()
-												: 0}
-										</p>
-										<p className="text-xs text-gray-500">
-											of{" "}
-											{election.eligibleVoters
-												? election.eligibleVoters.toLocaleString()
-												: 0}{" "}
-											eligible
-										</p>
-									</div>
-
-									<div className="bg-gray-50 rounded-lg p-3">
-										<div className="flex items-center space-x-2">
-											<Calendar className="w-4 h-4 text-gray-500" />
-											<span className="text-sm font-medium text-gray-900">
-												Ends
-											</span>
-										</div>
-										<p className="text-lg font-bold text-gray-900 mt-1">
-											{new Date(election.endDate).toLocaleDateString()}
-										</p>
-										<p className="text-xs text-gray-500">
-											{election.status === "Ongoing" ? "3 days left" : ""}
-										</p>
-									</div>
-								</div>
+								{/* Other election details */}
 
 								{/* Candidates Preview */}
-								{election.candidates.length > 0 && (
+								{(election.candidates || []).length > 0 && ( // Use empty array as default
 									<div className="mb-4">
 										<h4 className="text-sm font-medium text-gray-900 mb-3">
 											Candidates
@@ -479,46 +415,6 @@ export function Elections() {
 										</div>
 									</div>
 								)}
-
-								{/* Actions */}
-								<div className="flex space-x-3">
-									{election.status === "Ongoing" && (
-										<motion.button
-											whileHover={{ scale: 1.02 }}
-											whileTap={{ scale: 0.98 }}
-											onClick={() => setSelectedElection(election)}
-											className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors"
-											disabled={votedElections.has(election.id)}>
-											<Vote className="w-4 h-4 inline mr-2" />
-											{votedElections.has(election.id) ? "Voted" : "Vote Now"}
-										</motion.button>
-									)}
-
-									<motion.button
-										whileHover={{ scale: 1.02 }}
-										whileTap={{ scale: 0.98 }}
-										className="flex-1 bg-gray-100 text-gray-700 py-2 px-4 rounded-lg font-medium hover:bg-gray-200 transition-colors">
-										<Eye className="w-4 h-4 inline mr-2" />
-										View Details
-									</motion.button>
-
-									{election.status === "Completed" && (
-										<motion.button
-											whileTap={{ scale: 0.98 }}
-											className="flex-1 bg-green-100 text-green-700 py-2 px-4 rounded-lg font-medium hover:bg-green-200 transition-colors">
-											<BarChart3 className="w-4 h-4 inline mr-2" />
-											Results
-										</motion.button>
-									)}
-
-									{user?.isAdmin && election.status === "Ongoing" && (
-										<button
-											onClick={() => announceResults(election.id)}
-											className="bg-yellow-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-yellow-700 transition-colors">
-											Announce Results
-										</button>
-									)}
-								</div>
 							</motion.div>
 						))}
 					</div>
