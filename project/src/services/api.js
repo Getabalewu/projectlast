@@ -130,6 +130,20 @@ class ApiService {
       method: 'POST',
     });
   }
+
+  async updateElectionStatus(electionId, status) {
+    return this.request(`/elections/${electionId}/status`, {
+      method: 'PATCH',
+      body: { status },
+    });
+  }
+
+  async deleteElection(electionId) {
+    return this.request(`/elections/${electionId}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Contact endpoints
   async submitContactMessage(contactData) {
     return this.request('/contact', {

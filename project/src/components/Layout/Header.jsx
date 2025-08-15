@@ -89,17 +89,18 @@ export function Header() {
 								key={item.nameall}
 								to={item.href}
 								className="text-gray-700 hover:text-blue-600 font-medium transition-colors">
-								{item.name}
+								{item.nameall}
 							</Link>
 						))}
-						{protectedNavigation.map((item) => (
-							<Link
-								key={item.name}
-								to={item.href}
-								className="text-gray-700 hover:text-blue-600 font-medium transition-colors">
-								{item.name}
-							</Link>
-						))}
+						{user &&
+							protectedNavigation.map((item) => (
+								<Link
+									key={item.name}
+									to={item.href}
+									className="text-gray-700 hover:text-blue-600 font-medium transition-colors">
+									{item.name}
+								</Link>
+							))}
 					</nav>
 
 					{/* User Menu */}
@@ -158,11 +159,11 @@ export function Header() {
 					<div className="px-4 py-2 space-y-1">
 						{navigation.map((item) => (
 							<Link
-								key={item.name}
+								key={item.nameall}
 								to={item.href}
 								className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md"
 								onClick={() => setIsMenuOpen(false)}>
-								{item.name}
+								{item.nameall}
 							</Link>
 						))}
 						{user &&

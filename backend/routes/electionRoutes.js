@@ -1,191 +1,195 @@
 /** @format */
 
 import express from "express";
-import Club from "../models/Club.js";
+import Election from "../models/Election.js";
+import User from "../models/User.js";
 import { authenticateToken, requireAdmin } from "../middleware/auth.js";
 
 const router = express.Router();
 
-// Create a new club (Admin only)
+// Create a new election (Admin only)
 router.post("/", authenticateToken, async (req, res) => {
 	try {
 		if (req.user.role !== "admin" && !req.user.isAdmin) {
 			return res.status(403).json({ message: "Admin access required" });
 		}
 
-		const { name, category, description, image, founded } = req.body;
-		const club = new Club({ name, category, description, image, founded });
+		const { title, description, startDate, endDate, candidates, eligibleVoters } = req.body;
+		
+		// Validate required fields
+		if (!title || !description || !startDate || !endDate || !candidates || candidates.length < 2) {
+			return res.status(400).json({ message: "All fields are required and at least 2 candidates needed" });
+		}
 
-		const savedClub = await club.save();
-		res.status(201).json(savedClub);
+		const election = new Election({
+			title,
+			description,
+			startDate: new Date(startDate),
+			endDate: new Date(endDate),
+			candidates: candidates.map(candidate => ({
+				...candidate,
+				votes: 0
+			})),
+			eligibleVoters: eligibleVoters || 12547,
+			createdBy: req.user._id,
+			status: new Date(startDate) <= new Date() ? "Ongoing" : "Pending"
+		});
+
+		const savedElection = await election.save();
+		res.status(201).json(savedElection);
 	} catch (err) {
 		res.status(400).json({ message: err.message });
 	}
 });
 
-// Get all clubs
+// Get all elections
 router.get("/", async (req, res) => {
 	try {
-		const clubs = await Club.find()
-			.populate("members", "name email department year")
-			.populate("posts.author", "name");
-		res.status(200).json(clubs);
+		const elections = await Election.find()
+			.populate("createdBy", "name email")
+			.sort({ createdAt: -1 });
+		res.status(200).json(elections);
 	} catch (err) {
 		res.status(500).json({ message: err.message });
 	}
 });
 
-// Get club by ID
+// Get election by ID
 router.get("/:id", async (req, res) => {
 	try {
-		const club = await Club.findById(req.params.id)
-			.populate("members", "name email department year")
-			.populate("posts.author", "name")
-			.populate("joinRequests.user", "name email department year");
+		const election = await Election.findById(req.params.id)
+			.populate("createdBy", "name email")
+			.populate("voters", "name email");
 
-		if (!club) {
-			return res.status(404).json({ message: "Club not found" });
+		if (!election) {
+			return res.status(404).json({ message: "Election not found" });
 		}
 
-		res.status(200).json(club);
+		res.status(200).json(election);
 	} catch (err) {
 		res.status(500).json({ message: err.message });
 	}
 });
 
-// Request to join club
-router.post("/:id/join", authenticateToken, async (req, res) => {
+// Vote in election
+router.post("/:id/vote", authenticateToken, async (req, res) => {
 	try {
-		const { department, year, reason } = req.body;
-		const club = await Club.findById(req.params.id);
+		const { candidateId } = req.body;
+		const election = await Election.findById(req.params.id);
 
-		if (!club) {
-			return res.status(404).json({ message: "Club not found" });
+		if (!election) {
+			return res.status(404).json({ message: "Election not found" });
 		}
 
-		// Check if user is already a member
-		if (club.members.includes(req.user._id)) {
-			return res
-				.status(400)
-				.json({ message: "You are already a member of this club" });
+		// Check if election is active
+		const now = new Date();
+		if (now < election.startDate || now > election.endDate) {
+			return res.status(400).json({ message: "Election is not currently active" });
 		}
 
-		// Check if user already has a pending request
-		const existingRequest = club.joinRequests.find(
-			(request) =>
-				request.user.toString() === req.user._id.toString() &&
-				request.status === "pending"
-		);
-
-		if (existingRequest) {
-			return res
-				.status(400)
-				.json({ message: "You already have a pending join request" });
+		// Check if user has already voted
+		if (election.voters.includes(req.user._id)) {
+			return res.status(400).json({ message: "You have already voted in this election" });
 		}
 
-		club.joinRequests.push({
-			user: req.user._id,
-			department,
-			year,
-			reason,
+		// Find candidate and increment votes
+		const candidate = election.candidates.id(candidateId);
+		if (!candidate) {
+			return res.status(404).json({ message: "Candidate not found" });
+		}
+
+		candidate.votes += 1;
+		election.totalVotes += 1;
+		election.voters.push(req.user._id);
+
+		await election.save();
+
+		// Update user's voted elections
+		await User.findByIdAndUpdate(req.user._id, {
+			$push: { votedElections: election._id }
 		});
 
-		await club.save();
-		res.status(200).json({ message: "Join request submitted successfully" });
+		res.status(200).json({ message: "Vote cast successfully" });
 	} catch (err) {
 		res.status(500).json({ message: err.message });
 	}
 });
 
-// Approve/Reject join request (Admin only)
-router.patch(
-	"/:clubId/join-requests/:requestId",
-	authenticateToken,
-	async (req, res) => {
-		try {
-			if (req.user.role !== "admin" && !req.user.isAdmin) {
-				return res.status(403).json({ message: "Admin access required" });
-			}
-
-			const { status } = req.body; // "approved" or "rejected"
-			const club = await Club.findById(req.params.clubId);
-
-			if (!club) {
-				return res.status(404).json({ message: "Club not found" });
-			}
-
-			const request = club.joinRequests.id(req.params.requestId);
-			if (!request) {
-				return res.status(404).json({ message: "Join request not found" });
-			}
-
-			request.status = status;
-
-			if (status === "approved") {
-				club.members.push(request.user);
-			}
-
-			await club.save();
-			res.status(200).json({ message: `Join request ${status} successfully` });
-		} catch (err) {
-			res.status(500).json({ message: err.message });
-		}
-	}
-);
-
-// Add member directly (Admin only)
-router.post("/:id/members", authenticateToken, async (req, res) => {
+// Update election status (Admin only)
+router.patch("/:id/status", authenticateToken, async (req, res) => {
 	try {
 		if (req.user.role !== "admin" && !req.user.isAdmin) {
 			return res.status(403).json({ message: "Admin access required" });
 		}
 
-		const { userId } = req.body;
-		const club = await Club.findById(req.params.id);
+		const { status } = req.body;
+		const election = await Election.findById(req.params.id);
 
-		if (!club) {
-			return res.status(404).json({ message: "Club not found" });
+		if (!election) {
+			return res.status(404).json({ message: "Election not found" });
 		}
 
-		if (club.members.includes(userId)) {
-			return res.status(400).json({ message: "User is already a member" });
-		}
+		election.status = status;
+		await election.save();
 
-		club.members.push(userId);
-		await club.save();
-
-		res.status(200).json({ message: "Member added successfully" });
+		res.status(200).json({ message: "Election status updated successfully", election });
 	} catch (err) {
 		res.status(500).json({ message: err.message });
 	}
 });
 
-// Create club post
-router.post("/:id/posts", authenticateToken, async (req, res) => {
+// Announce election results (Admin only)
+router.post("/:id/announce", authenticateToken, async (req, res) => {
 	try {
-		const { title, content, image } = req.body;
-		const club = await Club.findById(req.params.id);
-
-		if (!club) {
-			return res.status(404).json({ message: "Club not found" });
+		if (req.user.role !== "admin" && !req.user.isAdmin) {
+			return res.status(403).json({ message: "Admin access required" });
 		}
 
-		// Check if user is a member or admin
-		if (!club.members.includes(req.user._id) && req.user.role !== "admin") {
-			return res.status(403).json({ message: "You must be a member to post" });
+		const election = await Election.findById(req.params.id);
+
+		if (!election) {
+			return res.status(404).json({ message: "Election not found" });
 		}
 
-		club.posts.push({
-			title,
-			content,
-			image,
-			author: req.user._id,
+		if (election.status !== "Completed") {
+			return res.status(400).json({ message: "Election must be completed before announcing results" });
+		}
+
+		// Sort candidates by votes to determine winner
+		const sortedCandidates = election.candidates.sort((a, b) => b.votes - a.votes);
+		const winner = sortedCandidates[0];
+
+		res.status(200).json({
+			message: "Election results announced successfully",
+			winner: winner,
+			results: sortedCandidates,
+			totalVotes: election.totalVotes
 		});
+	} catch (err) {
+		res.status(500).json({ message: err.message });
+	}
+});
 
-		await club.save();
-		await club.populate("posts.author", "name");
+// Delete election (Admin only)
+router.delete("/:id", authenticateToken, async (req, res) => {
+	try {
+		if (req.user.role !== "admin" && !req.user.isAdmin) {
+			return res.status(403).json({ message: "Admin access required" });
+		}
 
-		res.status(201).json({ message: "Post created successfully", club });
+		const election = await Election.findById(req.params.id);
+
+		if (!election) {
+			return res.status(404).json({ message: "Election not found" });
+		}
+
+		// Don't allow deletion of ongoing elections with votes
+		if (election.status === "Ongoing" && election.totalVotes > 0) {
+			return res.status(400).json({ message: "Cannot delete ongoing election with votes" });
+		}
+
+		await Election.findByIdAndDelete(req.params.id);
+		res.status(200).json({ message: "Election deleted successfully" });
 	} catch (err) {
 		res.status(500).json({ message: err.message });
 	}

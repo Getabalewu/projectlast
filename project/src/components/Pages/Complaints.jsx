@@ -223,6 +223,112 @@ export function Complaints() {
 		}
 	};
 
+	// Component for individual complaint card
+	const ComplaintCard = ({ 
+		complaint, 
+		user, 
+		selectedComplaint, 
+		setSelectedComplaint, 
+		responseMessage, 
+		setResponseMessage, 
+		handleSendResponse, 
+		resolveComplaint,
+		getStatusIcon,
+		getStatusColor,
+		getPriorityColor
+	}) => (
+		<div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+			<div className="flex justify-between">
+				<div>
+					<h3 className="text-lg font-semibold text-gray-900">
+						{complaint.title}
+					</h3>
+					<p className="text-gray-600">{complaint.description}</p>
+					<div className="flex gap-2 mt-2 text-sm">
+						<span
+							className={`px-2 py-1 rounded-full flex items-center ${getStatusColor(
+								complaint.status
+							)}`}>
+							{getStatusIcon(complaint.status)}{" "}
+							<span className="ml-1">
+								{complaint.status.replace("_", " ")}
+							</span>
+						</span>
+						<span
+							className={`px-2 py-1 rounded-full ${getPriorityColor(
+								complaint.priority
+							)}`}>
+							{complaint.priority} priority
+						</span>
+						<span className="text-gray-500">
+							{new Date(complaint.submittedAt || complaint.createdAt).toLocaleDateString()}
+						</span>
+					</div>
+				</div>
+				<div className="flex items-center space-x-2">
+					{user?.isAdmin && complaint.status !== "resolved" && (
+						<button
+							onClick={() => resolveComplaint(complaint._id || complaint.id)}
+							className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition-colors">
+							Resolve
+						</button>
+					)}
+					<button
+						className="text-blue-600 hover:underline"
+						onClick={() =>
+							setSelectedComplaint(
+								selectedComplaint === (complaint._id || complaint.id)
+									? null
+									: (complaint._id || complaint.id)
+							)
+						}>
+						{selectedComplaint === (complaint._id || complaint.id) ? "Hide" : "Details"}
+					</button>
+				</div>
+			</div>
+
+			{selectedComplaint === (complaint._id || complaint.id) && (
+				<div className="mt-4 border-t pt-4">
+					<h4 className="font-semibold text-gray-800 mb-2">
+						Responses:
+					</h4>
+					{complaint.responses && complaint.responses.length > 0 ? (
+						complaint.responses.map((r, index) => (
+							<div key={r._id || r.id || index} className="bg-gray-50 rounded p-3 mb-2">
+								<div className="flex justify-between text-sm">
+									<span className="font-medium">{r.author}</span>
+									<span className="text-gray-500">
+										{new Date(r.timestamp).toLocaleDateString()}
+									</span>
+								</div>
+								<p className="text-gray-700 mt-1">{r.message}</p>
+							</div>
+						))
+					) : (
+						<p className="text-gray-500 text-sm">No responses yet.</p>
+					)}
+
+					{user?.isAdmin && (
+						<div className="flex gap-2 mt-4">
+							<input
+								type="text"
+								value={responseMessage}
+								onChange={(e) => setResponseMessage(e.target.value)}
+								className="flex-1 border border-gray-300 rounded px-3 py-2"
+								placeholder="Write a response..."
+							/>
+							<button
+								onClick={() => handleSendResponse(complaint._id || complaint.id)}
+								className="bg-blue-600 text-white px-4 py-2 rounded">
+								<Send className="w-4 h-4" />
+							</button>
+						</div>
+					)}
+				</div>
+			)}
+		</div>
+	);
+
 	return (
 		<div className="space-y-6">
 			{/* Header */}

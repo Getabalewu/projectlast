@@ -140,7 +140,20 @@ export function Elections() {
 			toast.error("Only admins can delete elections");
 			return;
 		}
-		toast.success("Election deleted successfully!");
+
+		const deleteElection = async () => {
+			try {
+				await apiService.deleteElection(electionId);
+				await fetchElections();
+				toast.success("Election deleted successfully!");
+			} catch (error) {
+				toast.error("Failed to delete election");
+			}
+		};
+
+		if (window.confirm("Are you sure you want to delete this election? This action cannot be undone.")) {
+			deleteElection();
+		}
 	};
 
 	const announceResults = async (electionId) => {
@@ -395,13 +408,89 @@ export function Elections() {
 								animate={{ opacity: 1, y: 0 }}
 								transition={{ delay: index * 0.1 }}
 								className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-								{/* Other election details */}
+								<div className="flex items-center justify-between mb-4">
+									<div className="flex items-center space-x-2">
+										<span
+											className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(
+												election.status
+											)}`}>
+											{getStatusIcon(election.status)}
+											<span className="ml-1 capitalize">{election.status}</span>
+										</span>
+									</div>
+									{user?.isAdmin && (
+										<div className="flex items-center space-x-2">
+											{election.status === "completed" && (
+												<button
+													onClick={() => announceResults(election.id)}
+													className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition-colors">
+													Announce Results
+												</button>
+											)}
+											<button
+												onClick={() => handleDeleteElection(election.id)}
+												className="text-red-600 hover:text-red-700 p-1">
+												<Trash2 className="w-4 h-4" />
+											</button>
+										</div>
+									)}
+								</div>
+
+								<h3 className="text-xl font-semibold text-gray-900 mb-2">
+									{election.title}
+								</h3>
+								<p className="text-gray-600 mb-4">{election.description}</p>
+
+								<div className="grid grid-cols-2 gap-4 mb-4">
+									<div>
+										<p className="text-sm text-gray-500">Start Date</p>
+										<p className="font-medium">
+											{new Date(election.startDate).toLocaleDateString()}
+										</p>
+									</div>
+									<div>
+										<p className="text-sm text-gray-500">End Date</p>
+										<p className="font-medium">
+											{new Date(election.endDate).toLocaleDateString()}
+										</p>
+									</div>
+								</div>
+
+								<div className="flex items-center justify-between mb-4">
+									<div className="flex items-center space-x-4">
+										<div className="flex items-center space-x-1">
+											<Users className="w-4 h-4 text-gray-500" />
+											<span className="text-sm text-gray-600">
+												{election.totalVotes || 0} votes
+											</span>
+										</div>
+										<div className="flex items-center space-x-1">
+											<BarChart3 className="w-4 h-4 text-gray-500" />
+											<span className="text-sm text-gray-600">
+												{election.eligibleVoters || 0} eligible
+											</span>
+										</div>
+									</div>
+									<div className="text-right">
+										<p className="text-sm text-gray-500">Turnout</p>
+										<p className="font-medium text-blue-600">
+											{election.eligibleVoters
+												? Math.round(
+														((election.totalVotes || 0) /
+															election.eligibleVoters) *
+															100
+												  )
+												: 0}
+											%
+										</p>
+									</div>
+								</div>
 
 								{/* Candidates Preview */}
-								{(election.candidates || []).length > 0 && ( // Use empty array as default
+								{(election.candidates || []).length > 0 && (
 									<div className="mb-4">
 										<h4 className="text-sm font-medium text-gray-900 mb-3">
-											Candidates
+											Candidates ({(election.candidates || []).length})
 										</h4>
 										<div className="flex -space-x-2">
 											{election.candidates.slice(0, 3).map((candidate) => (
@@ -412,11 +501,59 @@ export function Elections() {
 													className="w-8 h-8 rounded-full border-2 border-white object-cover"
 												/>
 											))}
+											{election.candidates.length > 3 && (
+												<div className="w-8 h-8 rounded-full border-2 border-white bg-gray-100 flex items-center justify-center text-xs font-medium text-gray-600">
+													+{election.candidates.length - 3}
+												</div>
+											)}
 										</div>
 									</div>
 								)}
+
+								<div className="flex items-center justify-between">
+									<button
+										onClick={() => setSelectedElection(election)}
+										className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 font-medium">
+										<Eye className="w-4 h-4" />
+										<span>View Details</span>
+									</button>
+									{election.status === "active" && !votedElections.has(election.id) && (
+										<button
+											onClick={() => setSelectedElection(election)}
+											className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+											Vote Now
+										</button>
+									)}
+									{votedElections.has(election.id) && (
+										<span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+											✓ Voted
+										</span>
+									)}
+								</div>
 							</motion.div>
 						))}
+					</div>
+				)}
+
+				{/* No Elections Message */}
+				{!loading && filteredElections.length === 0 && (
+					<div className="text-center py-12">
+						<Vote className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+						<h3 className="text-xl font-semibold text-gray-900 mb-2">
+							No elections found
+						</h3>
+						<p className="text-gray-600 mb-4">
+							{selectedTab === "all"
+								? "No elections have been created yet."
+								: `No ${selectedTab} elections at this time.`}
+						</p>
+						{user?.isAdmin && (
+							<button
+								onClick={() => setShowNewElectionForm(true)}
+								className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors">
+								Create First Election
+							</button>
+						)}
 					</div>
 				)}
 
